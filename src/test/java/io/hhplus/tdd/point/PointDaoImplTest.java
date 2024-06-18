@@ -28,11 +28,12 @@ class PointDaoImplTest {
     // 3. **테스트를 위해서라면 먼저 insert를 테이블로 바로 넣어버리는 작성할지
     // // ** , insert메소드를 완성시키는게 좋을지 질문 필요
     // 4. 예외처리 부분은 어디서 throw해 주는게 좋을 지모르겠다
-    /************** 질문 부분 *************/
+    /************** 질문 부분 *************
     // 1) Dao는 Mock 방식이 아닌 Autowired를 사용한 이유는 실제 dao가 제대로 값을 저장하고 조회하는지를 테스트 해보기 위함입니다.
     // >> 질문 1. Autowired로 진행한 것이 맞는 걸까요?
     // >> 질문 2. 예외처리의 경우 table에서 주는 값이 null이 아니고 userPoint의 경우 empty메소드로 인해 넣은 id값이 조회되어 버려 exception 처리를 어떻게 할지 감이 잡히지 않습니다.
     // >> 질문 3. Controller는 dto Service는 domain Dao는 entity를 사용하라고 강의 때에 들었던 것 같은데.. 각각 request, response마다 변환을 해서 값을 넘겨줘야 할지 고민입니다.
+     */
 
 
     @Autowired
