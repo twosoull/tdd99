@@ -1,5 +1,6 @@
 package io.hhplus.tdd.point;
 
+import io.hhplus.tdd.TddApplication;
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.domain.PointHistoryDomain;
@@ -9,9 +10,23 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
+@SpringBootTest
+@RunWith(SpringRunner.class)
+@ContextConfiguration(classes = TddApplication.class)
 class PointDaoImplTest {
     /**
      * TODO - 특정 유저의 포인트를 조회하는 기능을 작성해주세요.
@@ -31,44 +46,36 @@ class PointDaoImplTest {
     // // ** , insert메소드를 완성시키는게 좋을지 질문 필요
     // 4. 예외처리 부분은 어디서 throw해 주는게 좋을 지모르겠다
 
-    private PointHistoryTable pointHistoryTable;
-    private UserPointTable userPointTable;
+    @Autowired
+    PointHistoryTable pointHistoryTable;
 
-    @BeforeEach
-    void setUp(){
-        pointHistoryTable = new PointHistoryTable();
-        userPointTable = new UserPointTable();
-    }
+    @Autowired
+    UserPointTable userPointTable;
+
+    @Autowired
+    PointDaoImpl pointDao;
+
 
     @Test
     @DisplayName("특정 유저의 포인트 조회")
-    void point(){
+    void pointTest(){
         /**
          * given
          */
         //유저 1,2,3
-        userPointTable.insertOrUpdate(1, 1000);
-        userPointTable.insertOrUpdate(2, 2000);
-        userPointTable.insertOrUpdate(3, 3000);
+        pointDao.insertUserPoint(new UserPointDomain(1,1000));
+        pointDao.insertUserPoint(new UserPointDomain(2,2000));
+        pointDao.insertUserPoint(new UserPointDomain(3,3000));
 
         /**
          * when
          */
         long id1 = 1L;
-        UserPoint userPoint1 = userPointTable.selectById(id1);
+        UserPointEntity userPointEntity1 = pointDao.point(id1);
         long id2 = 2L;
-        UserPoint userPoint2 = userPointTable.selectById(id2);
+        UserPointEntity userPointEntity2 = pointDao.point(id2);
         long id3 = 3L;
-        UserPoint userPoint3 = userPointTable.selectById(id3);
-
-        UserPointEntity userPointEntity1 = new UserPointEntity()
-                .toEntity(userPoint1);
-
-        UserPointEntity userPointEntity2 = new UserPointEntity()
-                .toEntity(userPoint2);
-
-        UserPointEntity userPointEntity3 = new UserPointEntity()
-                .toEntity(userPoint3);
+        UserPointEntity userPointEntity3 = pointDao.point(id3);
 
         /**
          * then
@@ -89,13 +96,26 @@ class PointDaoImplTest {
         //insert하지 않은 999번의 회원은 테이블에서 자동으로 기본값(디폴트)로 반환하는 상태임
         //null 예외처리 불가
         //1)
-        /*
+
         Assertions.assertThrows(NoSuchElementException.class , ()->
             userPointTable.selectById(999L)
         );
-        */
+
         //2)
-        //Assertions.assertNull(userPointTable.selectById(999L));
+        Assertions.assertNull(userPointTable.selectById(999L));
+    }
+
+    @Test
+    @DisplayName("특정 유저의 포인트 조회")
+    void pointTest_exception(){
+        /**
+         * 예외처리
+         */
+        //insert하지 않은 999번의 회원은 테이블에서 자동으로 기본값(디폴트)로 반환하는 상태임
+        //null 예외처리 불가
+        //1)
+        UserPointEntity point = pointDao.point(999L);
+        System.out.println("dd = " + point.getId()); //999
     }
 
     @Test
@@ -114,7 +134,7 @@ class PointDaoImplTest {
          * when
          */
         long searchId = 1;
-        List<PointHistory> pointHistories = pointHistoryTable.selectAllByUserId(searchId);
+        List<PointHistory> pointHistories = pointDao.history(searchId);
 
         /**
          * then
@@ -141,7 +161,7 @@ class PointDaoImplTest {
         /**
          * 예외처리
          */
-        List<PointHistory> pointHistories= pointHistoryTable.selectAllByUserId(999);
+        List<PointHistory> pointHistories= pointDao.history(999L);
         System.out.println(pointHistories.size()); //0
         //질문..NoSuchElementException이 아니므로 dao단에서 할 필요가 없다..?
     }
@@ -152,12 +172,13 @@ class PointDaoImplTest {
         /**
          * given
          */
-        PointHistoryDomain pd = new PointHistoryDomain(1, 2000, TransactionType.CHARGE, System.currentTimeMillis());
+        PointHistoryDomain pd =
+                new PointHistoryDomain(1, 2000, TransactionType.CHARGE, System.currentTimeMillis());
 
         /**
          * when
          */
-        PointHistory result = pointHistoryTable.insert(pd.getUserId(), pd.getAmount(), pd.getType(), pd.getUpdateMillis());
+        PointHistory result = pointDao.insertHistory(pd);
 
         /**
          * then
@@ -171,7 +192,8 @@ class PointDaoImplTest {
     @Test
     @DisplayName("특정 유저의 포인트를 충전 - insert_history")
     void insertHistory_exception(){
-        PointHistory result = pointHistoryTable.insert(-1, -1, TransactionType.CHARGE, 123);
+        PointHistory result = pointDao.insertHistory(
+                new PointHistoryDomain(-1, -1, TransactionType.CHARGE, 123));
         //음수도 그냥 들어가는데.. 어떻게 테스트해야하나 흠
     }
 
@@ -185,7 +207,7 @@ class PointDaoImplTest {
         /**
          * when
          */
-        UserPoint result = userPointTable.insertOrUpdate(upd.getId(), upd.getPoint());
+        UserPoint result = pointDao.insertUserPoint(upd);
 
         /**
          * then
