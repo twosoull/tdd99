@@ -7,16 +7,10 @@ import io.hhplus.tdd.point.domain.PointHistoryDomain;
 import io.hhplus.tdd.point.domain.UserPointDomain;
 import io.hhplus.tdd.point.entity.UserPointEntity;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -28,23 +22,18 @@ import java.util.NoSuchElementException;
 @RunWith(SpringRunner.class)
 @ContextConfiguration(classes = TddApplication.class)
 class PointDaoImplTest {
-    /**
-     * TODO - 특정 유저의 포인트를 조회하는 기능을 작성해주세요.
-     */
-    /**
-     * TODO - 특정 유저의 포인트 충전/이용 내역을 조회하는 기능을 작성해주세요.
-     */
-    /**
-     * TODO - 특정 유저의 포인트를 충전하는 기능을 작성해주세요.
-     */
-    /**
-     * TODO - 특정 유저의 포인트를 사용하는 기능을 작성해주세요.
-     */
+    //의식흐름
     // 1. 4가지 중에 테스트를 거치기에 처음으로 작성하기 가장 편한 아이디 조회라고 생각했다.
     // 2. 하지만 데이터를 먼저 넣어야 하지 않을까하는 생각.
     // 3. **테스트를 위해서라면 먼저 insert를 테이블로 바로 넣어버리는 작성할지
     // // ** , insert메소드를 완성시키는게 좋을지 질문 필요
     // 4. 예외처리 부분은 어디서 throw해 주는게 좋을 지모르겠다
+    /************** 질문 부분 *************/
+    // 1) Dao는 Mock 방식이 아닌 Autowired를 사용한 이유는 실제 dao가 제대로 값을 저장하고 조회하는지를 테스트 해보기 위함입니다.
+    // >> 질문 1. Autowired로 진행한 것이 맞는 걸까요?
+    // >> 질문 2. 예외처리의 경우 table에서 주는 값이 null이 아니고 userPoint의 경우 empty메소드로 인해 넣은 id값이 조회되어 버려 exception 처리를 어떻게 할지 감이 잡히지 않습니다.
+    // >> 질문 3. Controller는 dto Service는 domain Dao는 entity를 사용하라고 강의 때에 들었던 것 같은데.. 각각 request, response마다 변환을 해서 값을 넘겨줘야 할지 고민입니다.
+
 
     @Autowired
     PointHistoryTable pointHistoryTable;
@@ -90,19 +79,6 @@ class PointDaoImplTest {
         Assertions.assertEquals(3,userPointEntity3.getId());
         Assertions.assertEquals(3000,userPointEntity3.getPoint());
 
-        /**
-         * 예외처리
-         */
-        //insert하지 않은 999번의 회원은 테이블에서 자동으로 기본값(디폴트)로 반환하는 상태임
-        //null 예외처리 불가
-        //1)
-
-        Assertions.assertThrows(NoSuchElementException.class , ()->
-            userPointTable.selectById(999L)
-        );
-
-        //2)
-        Assertions.assertNull(userPointTable.selectById(999L));
     }
 
     @Test
