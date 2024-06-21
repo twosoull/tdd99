@@ -5,28 +5,42 @@ import io.hhplus.tdd.point.dto.UserPointDto;
 import io.hhplus.tdd.point.entity.PointHistoryEntity;
 import io.hhplus.tdd.point.entity.UserPointEntity;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PointService {
 
     private final PointRepository pointDao;
+    private final ReentrantLock lock = new ReentrantLock();
 
     /**
      * TODO - 특정 유저의 포인트를 조회하는 기능을 작성해주세요.
      */
     public UserPointDto point(long id) {
-        return UserPointEntity.toDto(pointDao.point(id));
+        log.info("[point] id = {}", id);
+        lock.lock();
+
+        UserPointEntity point;
+        try {
+            point = pointDao.point(id);
+        } finally {
+            lock.unlock();
+        }
+        return UserPointEntity.toDto(point);
     }
 
     /**
      * TODO - 특정 유저의 포인트 충전/이용 내역을 조회하는 기능을 작성해주세요.
      */
     public List<PointHistoryDto> history(long id) {
+        log.info("[history] id = {}", id);
         return pointDao.history(id).stream().map(PointHistoryEntity::toDto).collect(Collectors.toList());
     }
 
@@ -34,15 +48,23 @@ public class PointService {
      * TODO - 특정 유저의 포인트를 충전하는 기능을 작성해주세요.
      */
     public UserPointDto charge(long id, long chargePoint){
-        //id를 조회한다.
-        UserPointEntity findUserPointEntity = pointDao.point(id);
+        log.info("[charge] id = {}, chargePoint = {}", id, chargePoint);
+        lock.lock();
 
-        long sumPoint = findUserPointEntity.getPoint() + chargePoint;
-        findUserPointEntity.setPoint(sumPoint);
-        UserPointEntity userPointEntity = pointDao.insertUserPoint(findUserPointEntity);
+        UserPointEntity userPointEntity;
+        try {
+            //id를 조회한다.
+            UserPointEntity findUserPointEntity = pointDao.point(id);
 
-        //히스토리를 쌓는다.
-        insertPointHistory(id, chargePoint, TransactionType.CHARGE);
+            long sumPoint = findUserPointEntity.getPoint() + chargePoint;
+            findUserPointEntity.setPoint(sumPoint);
+            userPointEntity = pointDao.insertUserPoint(findUserPointEntity);
+
+            //히스토리를 쌓는다.
+            insertPointHistory(id, chargePoint, TransactionType.CHARGE);
+        } finally {
+            lock.unlock();
+        }
 
         return UserPointDto.from(userPointEntity);
     }
@@ -51,16 +73,27 @@ public class PointService {
      * TODO - 특정 유저의 포인트를 사용하는 기능을 작성해주세요.
      */
     public UserPointDto use(long id, long usePoint){
-        UserPointEntity userPointEntity = pointDao.point(id);
+        log.info("[use] id = {}, usePoint = {}", id, usePoint);
+        lock.lock();
+        UserPointEntity subtractPointUserPointEntity;
 
-        //valid 처리
-        long resultPoint = subtractPoint(userPointEntity.getPoint(), usePoint);
+        try {
+            UserPointEntity userPointEntity = pointDao.point(id);
 
-        userPointEntity.setPoint(resultPoint);
-        UserPointEntity subtractPointUserPointEntity = pointDao.insertUserPoint(userPointEntity);
+            //valid 처리
+            long resultPoint = subtractPoint(userPointEntity.getPoint(), usePoint);
 
-        //히스토리를 쌓는다.
-        insertPointHistory(id, usePoint, TransactionType.USE);
+            userPointEntity.setPoint(resultPoint);
+            subtractPointUserPointEntity = pointDao.insertUserPoint(userPointEntity);
+
+            //히스토리를 쌓는다.
+            insertPointHistory(id, usePoint, TransactionType.USE);
+        } catch (Exception e) {
+            log.error("[use] 예외 발생: ", e);
+            throw e;
+        }finally {
+            lock.unlock();
+        }
 
         return UserPointDto.from(subtractPointUserPointEntity);
     }
